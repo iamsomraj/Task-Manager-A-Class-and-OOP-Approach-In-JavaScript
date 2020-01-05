@@ -3,6 +3,7 @@ class DOMHelper {
     const project = document.getElementById(elementId);
     const destination = document.querySelector(newDestinationSelector);
     destination.append(project);
+    project.scrollIntoView({behavior: 'smooth'});
   }
 
   static removeEventListener(element) {
@@ -13,7 +14,6 @@ class DOMHelper {
 }
 
 class Component {
-
   constructor(hostElementId, insertBefore = false) {
     if (hostElementId) {
       this.hostElement = document.getElementById(hostElementId);
@@ -38,10 +38,10 @@ class Component {
 }
 
 class Tooltip extends Component {
-
-  constructor(closeToolTipNotifierFunction) {
-    super();
+  constructor(closeToolTipNotifierFunction, text, hostElementId) {
+    super(hostElementId);
     this.closeToolTipNotifier = closeToolTipNotifierFunction;
+    this.text = text;
     this.create();
   }
 
@@ -53,12 +53,26 @@ class Tooltip extends Component {
   create = () => {
     const toolTipElement = document.createElement('div');
     toolTipElement.className = 'card';
-    toolTipElement.textContent = 'Sample Info';
+
+    const hostElPosLeft = this.hostElement.offsetLeft;
+    const hostElPosTop = this.hostElement.offsetTop;
+    const hostElPosHeight = this.hostElement.clientHeight;
+    const parentElScroll = this.hostElement.parentElement.scrollTop;
+    const x = hostElPosLeft + 20;
+    const y = hostElPosTop + hostElPosHeight - parentElScroll - 10;
+
+    toolTipElement.style.position = 'absolute';
+    toolTipElement.style.left = x + 'px';
+    toolTipElement.style.top = y + 'px';
+
+    const toolTipTemplate =  document.getElementById('tool-tip');
+    const toolTipBody = document.importNode(toolTipTemplate.content,true);
+    toolTipBody.querySelector('p').textContent = this.text;
+    toolTipElement.append(toolTipBody);
+
     this.element = toolTipElement;
     toolTipElement.addEventListener('click', this.closeToolTip);
-  }
-
-
+  };
 }
 
 class ProjectItem {
@@ -80,9 +94,11 @@ class ProjectItem {
     if (this.hasActiveToolTip) {
       return;
     }
+    const projectItem = document.getElementById(this.id);
+    const tootTipText = projectItem.dataset.extraInfo;
     const toolTip = new Tooltip(() => {
       this.hasActiveToolTip = false;
-    });
+    }, tootTipText, this.id);
     toolTip.insert();
     this.hasActiveToolTip = true;
   };
