@@ -3,7 +3,7 @@ class DOMHelper {
     const project = document.getElementById(elementId);
     const destination = document.querySelector(newDestinationSelector);
     destination.append(project);
-    project.scrollIntoView({behavior: 'smooth'});
+    project.scrollIntoView({ behavior: 'smooth' });
   }
 
   static removeEventListener(element) {
@@ -65,8 +65,8 @@ class Tooltip extends Component {
     toolTipElement.style.left = x + 'px';
     toolTipElement.style.top = y + 'px';
 
-    const toolTipTemplate =  document.getElementById('tool-tip');
-    const toolTipBody = document.importNode(toolTipTemplate.content,true);
+    const toolTipTemplate = document.getElementById('tool-tip');
+    const toolTipBody = document.importNode(toolTipTemplate.content, true);
     toolTipBody.querySelector('p').textContent = this.text;
     toolTipElement.append(toolTipBody);
 
@@ -83,6 +83,7 @@ class ProjectItem {
     this.updateProjectListHandler = updateProjectListFunction;
     this.connectMoreInfoButton();
     this.connectSwitchProjectButton(type);
+    this.connectDrag();
   }
 
   update = (updateProjectListFunction, type) => {
@@ -96,11 +97,22 @@ class ProjectItem {
     }
     const projectItem = document.getElementById(this.id);
     const tootTipText = projectItem.dataset.extraInfo;
-    const toolTip = new Tooltip(() => {
-      this.hasActiveToolTip = false;
-    }, tootTipText, this.id);
+    const toolTip = new Tooltip(
+      () => {
+        this.hasActiveToolTip = false;
+      },
+      tootTipText,
+      this.id
+    );
     toolTip.insert();
     this.hasActiveToolTip = true;
+  };
+
+  connectDrag = () => {
+    document.getElementById(this.id).addEventListener('dragstart', event => {
+      event.dataTransfer.setData('text/plain', this.id);
+      event.dataTransfer.effectAllowed = 'move';
+    });
   };
 
   connectMoreInfoButton = () => {
@@ -140,7 +152,46 @@ class ProjectList {
         )
       );
     }
+    this.connectDroppable();
   }
+
+  // for defining the drop zone
+  connectDroppable = () => {
+    const list = document.querySelector(`#${this.type}-projects ul`);
+
+    list.addEventListener('dragenter', event => {
+      if (event.dataTransfer.types[0] === 'text/plain') {
+        list.parentElement.classList.add('droppable');
+        event.preventDefault();
+      }
+    });
+    list.addEventListener('dragover', event => {
+      if (event.dataTransfer.types[0] === 'text/plain') {
+        event.preventDefault();
+      }
+    });
+
+    list.addEventListener('dragleave', event => {
+      if (event.relatedTarget.closest(`#${this.type}-projects ul`) !== list) {
+        list.parentElement.classList.remove('droppable');
+      }
+    });
+
+    list.addEventListener('drop', event => {
+      const projId = event.dataTransfer.getData('text/plain');
+
+      if (this.projects.find(project => projId === project.id)) {
+        return;
+      }
+
+      document
+        .getElementById(projId)
+        .querySelector('button:last-of-type')
+        .click();
+      list.parentElement.classList.remove('droppable');
+      event.preventDefault();
+    });
+  };
 
   // defining the switch handler function so that it can take another instance
   setSwitchHandlerFunction = switchHandlerFunction => {
